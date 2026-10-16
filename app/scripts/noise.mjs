@@ -2,17 +2,17 @@
 // (mismas fees, timebounds y forma de transacción), a intervalos aleatorios. Así el
 // depósito y el retiro del jurado quedan mezclados con otros iguales.
 //
-// Uso (desde app/):  npx vite-node scripts/noise.mjs -- [minutos=30] [minSeg=20] [maxSeg=70]
+// Uso (desde app/):  NOISE_MIN=30 NOISE_GAP_MIN=10 NOISE_GAP_MAX=40 npx vite-node scripts/noise.mjs
+// (minutos de duración y segundos mínimo/máximo entre señuelos)
 // Notas pendientes de cobro: scripts/.seed-notes.json en la raíz del repo (ignorado por git).
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { depositNewNote, withdrawNote, isSpent, parseNote } from '../src/lib/pool.js';
 import { newFundedKeypair, keypairSigner } from '../src/lib/stellar.js';
 
-const args = process.argv.slice(2).filter((a) => a !== '--');
-const minutes = Number(args[0] ?? 30);
-const minGap = Number(args[1] ?? 20);
-const maxGap = Number(args[2] ?? 70);
+const minutes = Number(process.env.NOISE_MIN ?? 30);
+const minGap = Number(process.env.NOISE_GAP_MIN ?? 10);
+const maxGap = Number(process.env.NOISE_GAP_MAX ?? 40);
 
 const NOTES_FILE = new URL('../../scripts/.seed-notes.json', import.meta.url);
 const zkWasm = fileURLToPath(new URL('../public/zk/withdraw.wasm', import.meta.url));
