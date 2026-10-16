@@ -53,3 +53,9 @@ export function hexToBytes(hex) {
 export function bytesToHex(bytes) {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+// Igual que proofToSoroban pero en bytes: { a: Uint8Array(64), b: Uint8Array(128), c: Uint8Array(64) }.
+export function proofToSorobanBytes(proof) {
+  const { a, b, c } = proofToSoroban(proof);
+  return { a: hexToBytes(a), b: hexToBytes(b), c: hexToBytes(c) };
+}

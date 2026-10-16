@@ -159,3 +159,7 @@ export async function buildWithdrawInput(note, leaves, recipientAddress) {
     },
   };
 }
+
+// Alias que usa la app.
+export const buildMerkleProof = buildMerklePath;
+export const recipientToField = recipientField;
