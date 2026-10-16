@@ -7,3 +7,4 @@ circuits/build/
 *.ptau
 .DS_Store
 scripts/.seed-notes.json
+scripts/noise.log
