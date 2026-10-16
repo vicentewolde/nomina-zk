@@ -1,0 +1,28 @@
+[package]
+name = "nomina-pool"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { version = "28.0.0", features = ["hazmat-crypto"] }
+soroban-poseidon = "28.0.0"
+
+[dev-dependencies]
+soroban-sdk = { version = "28.0.0", features = ["hazmat-crypto", "testutils"] }
+serde_json = "1"
+hex = "0.4"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+codegen-units = 1
+lto = true

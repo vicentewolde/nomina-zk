@@ -73,3 +73,14 @@ denomination() -> i128
 - **¡No vuelvas a correr `build.sh` tras desplegar el contrato!** La contribución del setup es aleatoria: regenera zkey y VK, y el contrato desplegado dejaría de aceptar pruebas. Si se regenera, hay que redesplegar con el nuevo `vk_soroban.json`.
 - **API de `app/src/zk/note.js`** (todo async salvo indicación): `createNote(denominationStroops)`, `parseNote(text)`, `serializeNote(note)` (sync), `commitmentOf`, `nullifierHashOf`, `computeZeros()`, `buildMerklePath(leaves, index)`, `computeRoot(leaves)`, `recipientField(G)`, `buildWithdrawInput(note, leaves, G) -> { leafIndex, input }` (listo para `snarkjs.groth16.fullProve(input, '/zk/withdraw.wasm', '/zk/withdraw_final.zkey')`). Las hojas aceptan BigInt, hex o `Uint8Array(32)`. Depende de `circomlibjs` y `@stellar/stellar-sdk` (la app debe tenerlos en sus dependencias).
 - **`app/src/zk/encode.js`:** `proofToSoroban(proof) -> {a,b,c}`, `vkToSoroban(vk)`, `publicSignalsToHex(publicSignals)`, `toHex32`, `hexToBytes`, `bytesToHex`.
+
+## Notas del contrato `contracts/pool` (desplegado en testnet)
+- **Pool:** `CD3CQAF32DMZ4HRJYQTTFQ2O2KXIEIRP4N6OMFHZFLC25LBBLDR2OBMP` · **SAC XLM:** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` · admin `nzk-admin`. Redesplegar: `bash contracts/scripts/deploy.sh` (reescribe `app/src/config.json`).
+- La codificación G2 de soroban-sdk (`be(X.c1)||be(X.c0)||be(Y.c1)||be(Y.c0)`) coincide con la de arriba: sin cambios.
+- `VerificationKey { alpha: BytesN<64>, beta: BytesN<128>, gamma: BytesN<128>, delta: BytesN<128>, ic: Vec<BytesN<64>> }` = el JSON de `vk_soroban.json` (debe tener 4 IC). `Proof { a, b, c }` como `proofToSoroban`.
+- Todas las entradas `BytesN<32>` (commitment, root, nullifier_hash) deben ser < r de BN254; si no, `Error #5`.
+- Errores: `1 UnknownRoot`, `2 NullifierSpent`, `3 InvalidProof`, `4 TreeFull`, `5 InvalidFieldElement`, `6 InvalidVerificationKey`, `7 InvalidDenomination`.
+- Eventos: deposit → topics `["deposit", commitment]`, data `leaf_index: u32`; withdraw → topics `["withdraw", nullifier_hash]`, data `()`.
+- `withdraw` no requiere firma de nadie (cualquiera puede enviarlo; la prueba ata el `recipient`). La cuenta G de destino debe existir en la red (el SAC nativo no crea cuentas).
+- Poseidon on-chain: crate oficial `soroban-poseidon` 28 (host function `poseidon_permutation` con parámetros de circomlib), verificado contra `poseidon-vectors.json` en `cargo test`.
+- Smoke test ya hecho en testnet: hojas 0..2 = las de `test-vector.json` y un withdraw real con esa prueba (nullifier `1c53f739…bb8b` ya gastado). Los depósitos de la app empiezan en el índice 3.
