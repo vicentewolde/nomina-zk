@@ -574,6 +574,7 @@ const actions = {
 
   async claim() {
     const c = state.claim;
+    if (c.busy) return; // evita cobros paralelos de la misma nota por doble clic
     c.text = $('#claim-text').value;
     c.g = $('#claim-g')?.value.trim() || '';
     const notes = splitNotes(c.text);
@@ -590,6 +591,7 @@ const actions = {
 
     c.busy = true;
     c.steps = [];
+    render(); // deshabilita el botón de inmediato, antes de las verificaciones de red
     const steps = c.steps;
     const begin = (label) => {
       steps.forEach((s) => s.status === 'run' && (s.status = 'ok'));
@@ -652,7 +654,9 @@ const actions = {
     } catch (err) {
       const last = steps[steps.length - 1];
       if (last) last.status = 'err';
-      c.error = err.message;
+      c.error = /Error\(Contract, #2\)|ya fue cobrada/.test(err.message)
+        ? 'Esta nota ya fue cobrada (¿se pulsó cobrar dos veces o en otra pestaña?). Revisa tu wallet: el dinero pudo haber llegado en el otro intento.'
+        : err.message;
     }
     c.busy = false;
     render();
