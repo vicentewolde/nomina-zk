@@ -6,3 +6,4 @@ target/
 circuits/build/
 *.ptau
 .DS_Store
+scripts/.seed-notes.json

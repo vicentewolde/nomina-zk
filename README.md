@@ -17,7 +17,7 @@ En un ledger público, pagar sueldos expone quién trabaja para quién y cuánto
 
 1. **Asistente de nómina (IA).** La empresa escribe la nómina en lenguaje natural ("paga 30 XLM a Ana y 20 a Bruno"). La función serverless `/api/payroll` llama a la API de **OpenRouter**, que la convierte en una lista de pagos y señala alertas (duplicados, montos atípicos). Cada empleado recibe `⌈monto / 10⌉` notas.
 2. **Depósito.** Por cada nota, el navegador genera `nullifier` y `secret` aleatorios y llama a `deposit(from, commitment)` con `commitment = Poseidon(nullifier, secret)`. El contrato inserta el commitment en un Merkle tree on-chain.
-3. **Entrega.** La empresa le pasa a cada empleado un link `/?nota=nzk-…` por un canal privado. **La nota es el dinero.**
+3. **Entrega.** La empresa le pasa a cada empleado un link `/#nota=nzk-…` (el fragmento `#` nunca llega al servidor) por un canal privado. **La nota es el dinero.**
 4. **Retiro.** El empleado abre el link; la app crea una wallet nueva (friendbot), descarga las hojas con `get_leaves`, arma el Merkle path, genera la prueba Groth16 con snarkjs y llama a `withdraw(proof, root, nullifier_hash, recipient)`. El contrato verifica la prueba (host functions BN254), marca el `nullifierHash` como gastado y transfiere 10 XLM.
 5. **Lo que ve el mundo.** La app enlaza cada transacción en stellar.expert: el depósito muestra un commitment y el retiro un nullifierHash, y no hay forma de relacionarlos sin el secreto.
 

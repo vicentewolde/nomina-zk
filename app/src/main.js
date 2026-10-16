@@ -222,7 +222,7 @@ function progressList(items) {
 }
 
 function shareLink(d) {
-  return `${location.origin}/?nota=${d.notes.map((n) => n.text).join(',')}`;
+  return `${location.origin}/#nota=${d.notes.map((n) => n.text).join(',')}`;
 }
 
 function deliveriesCard() {
