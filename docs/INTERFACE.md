@@ -61,3 +61,15 @@ denomination() -> i128
 ## Función serverless de OpenRouter (`app/api/payroll.js`, Vercel)
 - `POST /api/payroll { text: string, denominationXlm: number }` → `{ payments: [{ name, amountXlm, notes }], warnings: [string] }`.
 - Usa `process.env.OPENROUTER_API_KEY`. El modelo se configura con `OPENROUTER_MODEL` (por defecto un modelo barato). Nunca expongas la key al cliente.
+
+## Notas de `circuits/` (implementado, 16 oct)
+- **G2 verificado** contra `soroban-sdk 29.0.1` (`src/crypto/bn254.rs`): `X.c1 || X.c0 || Y.c1 || Y.c0`. Sin cambios. (Control: `gamma` de la VK empieza por `198e9393…`, el generador G2 de BN254 en orden Ethereum.)
+- **ptau:** los espejos de Hermez (S3 y GCS) devuelven 403. Se usa el Perpetual Powers of Tau de PSE `ppot_0080_13.ptau` (2^13). El circuito tiene 6631 restricciones.
+- **Restricción extra:** el circuito comprueba que `nullifier` y `secret` caben en 248 bits (`Num2Bits(248)`), coherente con "31 bytes".
+- **Vectores para el contrato** (commiteados con `git add -f`, `circuits/build/` sigue ignorado):
+  - `circuits/build/vk_soroban.json`: `{ alpha, beta, gamma, delta, ic: [4] }` en hex.
+  - `circuits/build/test-vector.json`: prueba real + `soroban.proof {a,b,c}` + `soroban.publicInputs [root, nullifierHash, recipient]` (hex 32 B BE) + `recipientAddress` y `leaves`. Debe verificar en el contrato.
+  - `circuits/build/poseidon-vectors.json`: `Poseidon([1]) = 29176100…0133`, `Poseidon([1,2]) = 115cc0f5…189a`, `zeros[0..10]` y la raíz vacía.
+- **¡No vuelvas a correr `build.sh` tras desplegar el contrato!** La contribución del setup es aleatoria: regenera zkey y VK, y el contrato desplegado dejaría de aceptar pruebas. Si se regenera, hay que redesplegar con el nuevo `vk_soroban.json`.
+- **API de `app/src/zk/note.js`** (todo async salvo indicación): `createNote(denominationStroops)`, `parseNote(text)`, `serializeNote(note)` (sync), `commitmentOf`, `nullifierHashOf`, `computeZeros()`, `buildMerklePath(leaves, index)`, `computeRoot(leaves)`, `recipientField(G)`, `buildWithdrawInput(note, leaves, G) -> { leafIndex, input }` (listo para `snarkjs.groth16.fullProve(input, '/zk/withdraw.wasm', '/zk/withdraw_final.zkey')`). Las hojas aceptan BigInt, hex o `Uint8Array(32)`. Depende de `circomlibjs` y `@stellar/stellar-sdk` (la app debe tenerlos en sus dependencias).
+- **`app/src/zk/encode.js`:** `proofToSoroban(proof) -> {a,b,c}`, `vkToSoroban(vk)`, `publicSignalsToHex(publicSignals)`, `toHex32`, `hexToBytes`, `bytesToHex`.
