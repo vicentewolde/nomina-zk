@@ -136,7 +136,7 @@ export async function invokeContract({ contractId, method, args, signer, onStatu
         .setTimeout(120)
         .build();
       onStatus('Simulando en Soroban…');
-      const prepared = await server.prepareTransaction(built);
+      const prepared = await prepareWithMargin(built);
       onStatus(signer.freighter ? 'Esperando firma en Freighter…' : 'Firmando…');
       const signed = await signer.sign(prepared);
       onStatus('Enviando…');
@@ -167,14 +167,34 @@ export async function invokeContract({ contractId, method, args, signer, onStatu
   throw lastError;
 }
 
+// Margen sobre lo que estima la simulación. Si entre simular y enviar entran otros depósitos,
+// el contrato recorre más raíces y la tx real gasta algo más de CPU que la simulada; sin
+// margen, la red la corta con RESOURCE_LIMIT_EXCEEDED.
+const RESOURCE_MARGIN = 1.3;
+
+async function prepareWithMargin(built) {
+  const sim = await server.simulateTransaction(built);
+  if (rpc.Api.isSimulationError(sim)) throw new Error(`simulation failed: ${sim.error}`);
+  const data = sim.transactionData;
+  const current = data.build();
+  const res = current.resources;
+  data.setResources(
+    Math.ceil(Number(res.instructions) * RESOURCE_MARGIN),
+    Math.ceil(Number(res.diskReadBytes) * RESOURCE_MARGIN),
+    Math.ceil(Number(res.writeBytes) * RESOURCE_MARGIN),
+  );
+  const fee = BigInt(current.resourceFee.toString());
+  data.setResourceFee(((fee * 3n) / 2n).toString());
+  return rpc.assembleTransaction(built, sim).build();
+}
+
 async function waitForTx(hash) {
   for (let i = 0; i < 60; i++) {
     const res = await server.getTransaction(hash);
     if (res.status === rpc.Api.GetTransactionStatus.SUCCESS) return res;
     if (res.status === rpc.Api.GetTransactionStatus.FAILED) {
-      const err = new Error(`La transacción ${short(hash, 6)} falló on-chain`);
-      err.final = true;
-      throw err;
+      // Se revirtió entera (nada se cobró ni se gastó salvo la fee): invokeContract reintenta.
+      throw new Error(`La transacción ${short(hash, 6)} falló on-chain; reintentando con estado nuevo`);
     }
     await sleep(1500);
   }
