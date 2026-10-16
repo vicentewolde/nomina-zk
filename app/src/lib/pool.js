@@ -45,7 +45,7 @@ export { parseNote };
  * Retira una nota hacia `recipient`. `signer` paga la fee (puede ser la misma wallet nueva).
  * onStep(clave, texto) informa el progreso a la UI.
  */
-export async function withdrawNote({ noteText, recipient, signer, onStep }) {
+export async function withdrawNote({ noteText, recipient, signer, onStep, zkWasm = '/zk/withdraw.wasm', zkKey = '/zk/withdraw_final.zkey' }) {
   const step = (k, t) => onStep?.(k, t);
 
   step('parse', 'Leyendo la nota…');
@@ -68,7 +68,7 @@ export async function withdrawNote({ noteText, recipient, signer, onStep }) {
   step('prove', `Generando la prueba ZK en tu navegador (hoja #${leafIndex} entre ${leaves.length})…`);
   const snarkjs = await import('snarkjs');
   const t0 = performance.now();
-  const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, '/zk/withdraw.wasm', '/zk/withdraw_final.zkey');
+  const { proof, publicSignals } = await snarkjs.groth16.fullProve(input, zkWasm, zkKey);
   const proveMs = Math.round(performance.now() - t0);
   if (publicSignals[0] !== input.root || publicSignals[1] !== input.nullifierHash) {
     throw new Error('Las señales públicas de la prueba no coinciden');

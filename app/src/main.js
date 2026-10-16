@@ -579,8 +579,13 @@ const actions = {
     };
 
     try {
-      const { parseNote, withdrawNote } = await poolLib();
-      for (const n of notes) await parseNote(n); // valida el formato antes de gastar fees
+      const { parseNote, withdrawNote, isSpent } = await poolLib();
+      // Valida el formato y que ninguna nota esté cobrada antes de gastar friendbot o fees.
+      const probe = Keypair.random().publicKey();
+      for (const n of notes) {
+        const parsed = await parseNote(n);
+        if (await isSpent(parsed.nullifierHash, probe)) throw new Error('Esta nota ya fue cobrada');
+      }
 
       let recipient;
       let secret = null;

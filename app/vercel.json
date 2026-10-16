@@ -5,12 +5,28 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/payroll.js": { "maxDuration": 30 }
+    "api/payroll.js": {
+      "maxDuration": 30
+    }
   },
   "headers": [
     {
       "source": "/zk/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
     }
   ]
 }

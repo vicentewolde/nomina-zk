@@ -34,12 +34,23 @@ export function isValidG(g) {
 }
 
 export async function fundWithFriendbot(address) {
-  const res = await fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(address)}`);
-  if (res.ok) return true;
-  const body = await res.text();
-  // Friendbot responde 400 si la cuenta ya existe: no es un error para nosotros.
-  if (body.includes('createAccountAlreadyExist') || body.includes('already funded')) return true;
-  throw new Error(`Friendbot falló (${res.status})`);
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${FRIENDBOT_URL}?addr=${encodeURIComponent(address)}`, { signal: AbortSignal.timeout(20000) });
+      if (res.ok) return true;
+      const body = await res.text();
+      // Friendbot responde 400 si la cuenta ya existe: no es un error para nosotros.
+      if (body.includes('createAccountAlreadyExist') || body.includes('already funded')) return true;
+      lastError = new Error(`Friendbot falló (${res.status})`);
+    } catch (err) {
+      lastError = err;
+    }
+    // A veces la cuenta se crea aunque la respuesta falle.
+    if ((await getXlmBalance(address).catch(() => null)) !== null) return true;
+    await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+  }
+  throw new Error(`Friendbot no respondió tras 3 intentos (${lastError?.message ?? 'error'}). Reintenta en unos segundos.`);
 }
 
 export async function newFundedKeypair() {
