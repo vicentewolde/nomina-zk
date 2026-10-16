@@ -6,6 +6,13 @@ En un ledger público, pagar sueldos expone quién trabaja para quién y cuánto
 
 > Solo testnet. No uses esto con fondos reales.
 
+## En vivo
+
+- **App:** https://nomina-zk.vercel.app
+- **Contrato pool (testnet):** [`CD3CQAF32DMZ4HRJYQTTFQ2O2KXIEIRP4N6OMFHZFLC25LBBLDR2OBMP`](https://stellar.expert/explorer/testnet/contract/CD3CQAF32DMZ4HRJYQTTFQ2O2KXIEIRP4N6OMFHZFLC25LBBLDR2OBMP)
+- **Pago irrastreable verificado on-chain:** retiro [`76a097c2…cd6c9702`](https://stellar.expert/explorer/testnet/tx/76a097c2b65f1b693363b97689aa0b84f7ee4a7ba37368bef8d9ccdfcd6c9702) a una wallet nueva ([`GB2P…AYGI`](https://stellar.expert/explorer/testnet/account/GB2P2NMR4ZQWKDRZEICAP2G5QEST2OVS6XSJJ6ONFVOR3O7HLKFUAYGI)), cuyo historial solo muestra a Friendbot y al contrato, nunca a la empresa.
+- Explicación para principiantes: [docs/EXPLICACION.md](docs/EXPLICACION.md) · PRD: [docs/PRD.md](docs/PRD.md)
+
 ## Cómo funciona
 
 1. **Asistente de nómina (IA).** La empresa escribe la nómina en lenguaje natural ("paga 30 XLM a Ana y 20 a Bruno"). La función serverless `/api/payroll` llama a la API de **OpenRouter**, que la convierte en una lista de pagos y señala alertas (duplicados, montos atípicos). Cada empleado recibe `⌈monto / 10⌉` notas.
