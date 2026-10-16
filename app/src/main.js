@@ -13,13 +13,14 @@ import {
   short,
 } from './lib/stellar.js';
 import { denominationXlm, getConfig, hasFileConfig, setPoolOverride } from './lib/config.js';
-import { load, logActivity, save } from './lib/store.js';
+import { load, logActivity, save, setScope } from './lib/store.js';
 
 // El código ZK (circomlibjs, snarkjs) es pesado: se carga solo cuando hace falta.
 const poolLib = () => import('./lib/pool.js');
 
 // ---------------------------------------------------------------- estado
 const urlNotes = readNotesFromUrl();
+setScope(addressOf(load('company', null)));
 const state = {
   tab: urlNotes ? 'empleado' : load('tab', 'empresa'),
   company: load('company', null), // { type: 'local', secret } | { type: 'freighter', address }
@@ -55,9 +56,25 @@ const esc = (s) =>
 const fmt = (n) => Number(n).toLocaleString('es', { maximumFractionDigits: 2 });
 const $ = (sel) => document.querySelector(sel);
 
+function addressOf(company) {
+  if (!company) return null;
+  try {
+    return company.type === 'local' ? Keypair.fromSecret(company.secret).publicKey() : company.address;
+  } catch {
+    return null;
+  }
+}
+
 function companyAddress() {
-  if (!state.company) return null;
-  return state.company.type === 'local' ? Keypair.fromSecret(state.company.secret).publicKey() : state.company.address;
+  return addressOf(state.company);
+}
+
+// Cada wallet ve solo su propio historial: al cambiar de wallet se recarga desde su espacio.
+function switchScope() {
+  setScope(companyAddress());
+  state.payroll = load('payroll', { text: '', payments: [], warnings: [], model: null });
+  state.deliveries = load('deliveries', []);
+  state.dep = { busy: false, log: [], error: null };
 }
 
 async function companySigner() {
@@ -334,10 +351,10 @@ function worldView() {
     <p class="sub">Esto es todo lo que un observador del ledger puede ver. Abre cada transacción en stellar.expert y compruébalo.</p>
     <div class="world">
       <div class="col"><h3>Depósitos (empresa → pool)</h3>
-        ${deps.length ? deps.map((a) => txItem(a, acct(a.from), poolChip, `commitment ${esc(short(a.commitment, 6))} · ${fmt(denominationXlm())} XLM`)).join('') : '<p class="muted small">Aún no hay depósitos desde este navegador.</p>'}
+        ${deps.length ? deps.map((a) => txItem(a, acct(a.from), poolChip, `commitment ${esc(short(a.commitment, 6))} · ${fmt(denominationXlm())} XLM`)).join('') : '<p class="muted small">Aún no hay depósitos desde esta wallet.</p>'}
       </div>
       <div class="col"><h3>Retiros (pool → wallet nueva)</h3>
-        ${wds.length ? wds.map((a) => txItem(a, poolChip, acct(a.to), `nullifierHash ${esc(short(a.nullifierHash, 6))} · ${fmt(denominationXlm())} XLM${a.from !== a.to ? ` · fee pagada por ${esc(short(a.from, 4))}` : ''}`)).join('') : '<p class="muted small">Aún no hay retiros desde este navegador.</p>'}
+        ${wds.length ? wds.map((a) => txItem(a, poolChip, acct(a.to), `nullifierHash ${esc(short(a.nullifierHash, 6))} · ${fmt(denominationXlm())} XLM${a.from !== a.to ? ` · fee pagada por ${esc(short(a.from, 4))}` : ''}`)).join('') : '<p class="muted small">Aún no hay retiros desde esta wallet.</p>'}
       </div>
     </div>
     <div class="notice" style="margin-top:12px">
@@ -382,6 +399,7 @@ const actions = {
       const kp = await newFundedKeypair();
       state.company = { type: 'local', secret: kp.secret() };
       save('company', state.company);
+      switchScope();
       state.companyMsg = { kind: 'ok', text: 'Cuenta creada y fondeada con 10.000 XLM de testnet.' };
     } catch (err) {
       state.companyMsg = { kind: 'err', text: err.message };
@@ -395,6 +413,7 @@ const actions = {
       state.freighter = await freighterSigner();
       state.company = { type: 'freighter', address: state.freighter.address };
       save('company', state.company);
+      switchScope();
       state.companyMsg = { kind: 'ok', text: 'Freighter conectado.' };
     } catch (err) {
       state.companyMsg = { kind: 'err', text: err.message };
@@ -423,6 +442,7 @@ const actions = {
     state.freighter = null;
     state.companyMsg = null;
     save('company', null);
+    switchScope();
     render();
   },
 
